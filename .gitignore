@@ -1,0 +1,20 @@
+# Rust build artifacts
+/target/
+
+# Trunk build output and cache
+/dist/
+/.trunk/
+
+# WASM/JS build byproducts
+*.wasm
+*.js.map
+
+# macOS
+.DS_Store
+
+# IDE/editor
+.idea/
+.vscode/
+
+# Logs
+*.log

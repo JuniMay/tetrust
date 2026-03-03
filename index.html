@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark light" />
+  <title>Tetrust</title>
+
+  <!-- GitHub Pages project sites are served from a sub-path. This base tag is filled by Trunk. -->
+  <base data-trunk-public-url />
+
+  <link data-trunk rel="copy-dir" href="assets" />
+  <link rel="icon" href="assets/favicon.svg" />
+  <link data-trunk rel="css" href="styles.css" />
+  <link data-trunk rel="rust" data-wasm-opt="z" />
+</head>
+
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">▦</span>
+        <span class="brand-name">Tetrust</span>
+      </div>
+      <div class="topbar-actions">
+        <button id="btn-pause" class="chip" aria-label="Pause / resume">Pause</button>
+        <button id="btn-reset" class="chip" aria-label="Restart game">Restart</button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="board-wrap" aria-label="Playfield">
+        <canvas id="board" class="board" width="320" height="640"></canvas>
+        <div id="overlay-hint" class="overlay-hint" aria-hidden="true">
+          Tap to focus • Use on‑screen controls or keyboard
+        </div>
+      </section>
+
+      <aside class="panel" aria-label="Stats">
+        <div class="stats">
+          <div class="stat">
+            <div class="label">Score</div>
+            <div id="score" class="value">0</div>
+          </div>
+          <div class="stat">
+            <div class="label">Level</div>
+            <div id="level" class="value">1</div>
+          </div>
+          <div class="stat">
+            <div class="label">Lines</div>
+            <div id="lines" class="value">0</div>
+          </div>
+        </div>
+
+        <div class="minis">
+          <div class="mini">
+            <div class="mini-title">Hold</div>
+            <canvas id="hold" class="mini-canvas" width="160" height="160"></canvas>
+          </div>
+          <div class="mini">
+            <div class="mini-title">Next</div>
+            <canvas id="next" class="mini-canvas" width="160" height="340"></canvas>
+          </div>
+        </div>
+
+        <div class="help">
+          <div class="help-title">Controls</div>
+          <div class="help-grid">
+            <div>Move</div><div>← / →</div>
+            <div>Rotate</div><div>↑ (CW) • Z (CCW)</div>
+            <div>Soft drop</div><div>↓</div>
+            <div>Hard drop</div><div>Space</div>
+            <div>Hold</div><div>C or Shift</div>
+            <div>Pause</div><div>P</div>
+            <div>Restart</div><div>R</div>
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <section class="controls" aria-label="Touch controls">
+      <div class="controls-grid">
+        <div class="cluster move">
+          <button id="btn-left" class="btn" aria-label="Left">◀</button>
+          <button id="btn-right" class="btn" aria-label="Right">▶</button>
+          <button id="btn-down" class="btn" aria-label="Soft drop">▼</button>
+        </div>
+
+        <div class="cluster action">
+          <button id="btn-rot-ccw" class="btn" aria-label="Rotate counterclockwise">⟲</button>
+          <button id="btn-rot-cw" class="btn" aria-label="Rotate clockwise">⟳</button>
+          <button id="btn-hold" class="btn" aria-label="Hold">⧉</button>
+          <button id="btn-drop" class="btn primary" aria-label="Hard drop">⤓</button>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

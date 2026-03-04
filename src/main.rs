@@ -21,7 +21,7 @@ const DAS_MS: f64 = 140.0; // Delayed Auto Shift
 const ARR_MS: f64 = 40.0; // Auto Repeat Rate
 const GUIDANCE_LANG_EN: &str = "en";
 // Unified list of clickable controls (top-bar + touch bar + modal action).
-const BUTTON_IDS: [&str; 12] = [
+const BUTTON_IDS: [&str; 13] = [
     "btn-guidance-close",
     "btn-left",
     "btn-right",
@@ -32,6 +32,7 @@ const BUTTON_IDS: [&str; 12] = [
     "btn-hold",
     "btn-input-mode",
     "btn-open-guidance",
+    "btn-open-guidance-top",
     "btn-pause",
     "btn-reset",
 ];
@@ -407,7 +408,7 @@ impl App {
             "btn-pause" => self.input.pause = true,
             "btn-reset" => self.input.reset = true,
             "btn-input-mode" => self.toggle_input_mode(),
-            "btn-open-guidance" => self.show_entry_guidance(),
+            "btn-open-guidance" | "btn-open-guidance-top" => self.show_entry_guidance(),
             "btn-guidance-close" => {}
 
             _ => {}

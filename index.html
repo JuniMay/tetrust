@@ -88,6 +88,7 @@
       </div>
       <div class="topbar-actions">
         <button id="btn-input-mode" class="chip" aria-label="Toggle keyboard movement scheme">Input: Arrows</button>
+        <button id="btn-open-guidance-top" class="chip mobile-guide" aria-label="Open guidance">Guide</button>
         <button id="btn-pause" class="chip" aria-label="Pause / resume">Pause</button>
         <button id="btn-reset" class="chip" aria-label="Restart game">Restart</button>
       </div>
@@ -139,17 +140,21 @@
       </aside>
     </main>
 
-    <section class="controls" aria-label="Touch controls">
+    <section id="touch-controls" class="controls" aria-label="Touch controls">
       <div class="controls-grid">
-        <div class="cluster move">
-          <button id="btn-left" class="btn" aria-label="Left">◀</button>
-          <button id="btn-right" class="btn" aria-label="Right">▶</button>
-          <button id="btn-down" class="btn" aria-label="Soft drop">▼</button>
+        <div class="controls-left">
+          <div class="controls-row">
+            <button id="btn-left" class="btn" aria-label="Left">◀</button>
+            <button id="btn-right" class="btn" aria-label="Right">▶</button>
+            <button id="btn-down" class="btn" aria-label="Soft drop">▼</button>
+          </div>
+          <div class="controls-row">
+            <button id="btn-rot-ccw" class="btn" aria-label="Rotate counterclockwise">⟲</button>
+            <button id="btn-rot-cw" class="btn" aria-label="Rotate clockwise">⟳</button>
+          </div>
         </div>
 
-        <div class="cluster action">
-          <button id="btn-rot-ccw" class="btn" aria-label="Rotate counterclockwise">⟲</button>
-          <button id="btn-rot-cw" class="btn" aria-label="Rotate clockwise">⟳</button>
+        <div class="controls-right">
           <button id="btn-hold" class="btn" aria-label="Hold">⧉</button>
           <button id="btn-drop" class="btn primary" aria-label="Hard drop">⤓</button>
         </div>

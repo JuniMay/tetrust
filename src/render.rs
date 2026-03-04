@@ -108,12 +108,39 @@ impl Renderer {
     }
 
     pub fn resize_all(&self) -> Result<(), JsValue> {
+        self.sync_touch_controls_height();
+
         // This method is called through shared reference, but we only mutate DOM state.
         // It's fine as all DOM operations are interior-mutable.
         resize_canvas(&self.window, &self.board_canvas, &self.board_ctx)?;
         resize_canvas(&self.window, &self.side_hold_canvas, &self.side_hold_ctx)?;
         resize_canvas(&self.window, &self.side_next_canvas, &self.side_next_ctx)?;
         Ok(())
+    }
+
+    fn sync_touch_controls_height(&self) {
+        let Some(doc) = self.window.document() else {
+            return;
+        };
+        let Some(app_el) = doc.get_element_by_id("app") else {
+            return;
+        };
+        let Some(app) = app_el.dyn_ref::<HtmlElement>() else {
+            return;
+        };
+
+        // The controls are fixed-position; expose their measured height as a CSS var so
+        // board sizing and page bottom padding can avoid overlap on all touch layouts.
+        let controls_h = doc
+            .get_element_by_id("touch-controls")
+            .and_then(|el| el.dyn_into::<HtmlElement>().ok())
+            .map(|el| el.offset_height())
+            .filter(|h| *h > 0)
+            .unwrap_or(0);
+
+        let _ = app
+            .style()
+            .set_property("--touch-controls-height", &format!("{controls_h}px"));
     }
 
     pub fn render(&mut self, game: &Game) -> Result<(), JsValue> {

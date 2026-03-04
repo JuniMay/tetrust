@@ -15,6 +15,7 @@ const COLORS: [&str; 8] = [
     "#3b82ff",       // J
     "#ff9f1a",       // L
 ];
+const NEXT_PREVIEW_COUNT: usize = 4;
 
 pub struct Renderer {
     window: Window,
@@ -219,12 +220,22 @@ impl Renderer {
             ctx.set_text_align("center");
             ctx.set_text_baseline("middle");
 
-            let msg = if game.is_game_over() { "GAME OVER" } else { "PAUSED" };
+            let msg = if game.is_game_over() {
+                "GAME OVER"
+            } else {
+                "PAUSED"
+            };
             ctx.fill_text(msg, w / 2.0, h / 2.0)?;
             if game.is_game_over() {
-                ctx.set_font("600 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial");
+                ctx.set_font(
+                    "600 14px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial",
+                );
                 ctx.set_fill_style_str("rgba(231,235,242,0.76)");
-                ctx.fill_text("Press R (or Restart) to play again", w / 2.0, h / 2.0 + 34.0)?;
+                ctx.fill_text(
+                    "Press R (or Restart) to play again",
+                    w / 2.0,
+                    h / 2.0 + 34.0,
+                )?;
             }
         }
 
@@ -260,10 +271,9 @@ impl Renderer {
         ctx.set_fill_style_str("#121a29");
         ctx.fill_rect(0.0, 0.0, w, h);
 
-        // Compact right-side stack.
-        let count = 4usize;
-        let slot_h = h / (count as f64);
-        for (i, kind) in game.next.iter().take(count).enumerate() {
+        // Draw a compact vertical stack of upcoming pieces.
+        let slot_h = h / (NEXT_PREVIEW_COUNT as f64);
+        for (i, kind) in game.next.iter().take(NEXT_PREVIEW_COUNT).enumerate() {
             let y0 = (i as f64) * slot_h;
             draw_piece_in_slot(ctx, *kind, w, slot_h, y0)?;
         }
@@ -272,7 +282,11 @@ impl Renderer {
     }
 }
 
-fn resize_canvas(win: &Window, canvas: &HtmlCanvasElement, ctx: &CanvasRenderingContext2d) -> Result<(), JsValue> {
+fn resize_canvas(
+    win: &Window,
+    canvas: &HtmlCanvasElement,
+    ctx: &CanvasRenderingContext2d,
+) -> Result<(), JsValue> {
     let dpr = win.device_pixel_ratio();
     let css_w = canvas.client_width() as f64;
     let css_h = canvas.client_height() as f64;
@@ -326,7 +340,13 @@ fn draw_mino(
     Ok(())
 }
 
-fn draw_piece_in_box(ctx: &CanvasRenderingContext2d, kind: PieceKind, w: f64, h: f64, alpha: f64) -> Result<(), JsValue> {
+fn draw_piece_in_box(
+    ctx: &CanvasRenderingContext2d,
+    kind: PieceKind,
+    w: f64,
+    h: f64,
+    alpha: f64,
+) -> Result<(), JsValue> {
     // 4×4 cells centered.
     let cell = (w.min(h)) / 4.8;
     let ox = (w - cell * 4.0) / 2.0;
@@ -334,7 +354,14 @@ fn draw_piece_in_box(ctx: &CanvasRenderingContext2d, kind: PieceKind, w: f64, h:
 
     let (cells, color) = piece_preview(kind);
     for (x, y) in cells {
-        draw_mino(ctx, ox + (x as f64) * cell, oy + (y as f64) * cell, cell, color, alpha)?;
+        draw_mino(
+            ctx,
+            ox + (x as f64) * cell,
+            oy + (y as f64) * cell,
+            cell,
+            color,
+            alpha,
+        )?;
     }
     Ok(())
 }
@@ -353,7 +380,14 @@ fn draw_piece_in_slot(
 
     let (cells, color) = piece_preview(kind);
     for (x, y) in cells {
-        draw_mino(ctx, ox + (x as f64) * cell, oy + (y as f64) * cell, cell, color, 1.0)?;
+        draw_mino(
+            ctx,
+            ox + (x as f64) * cell,
+            oy + (y as f64) * cell,
+            cell,
+            color,
+            1.0,
+        )?;
     }
     Ok(())
 }

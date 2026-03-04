@@ -13,10 +13,28 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-use web_sys::{Document, Event, HtmlElement, HtmlSelectElement, KeyboardEvent, PointerEvent, Window};
+use web_sys::{
+    Document, Element, Event, HtmlElement, HtmlSelectElement, KeyboardEvent, PointerEvent, Window,
+};
 
 const DAS_MS: f64 = 140.0; // Delayed Auto Shift
-const ARR_MS: f64 = 40.0;  // Auto Repeat Rate
+const ARR_MS: f64 = 40.0; // Auto Repeat Rate
+const GUIDANCE_LANG_EN: &str = "en";
+// Unified list of clickable controls (top-bar + touch bar + modal action).
+const BUTTON_IDS: [&str; 12] = [
+    "btn-guidance-close",
+    "btn-left",
+    "btn-right",
+    "btn-down",
+    "btn-rot-cw",
+    "btn-rot-ccw",
+    "btn-drop",
+    "btn-hold",
+    "btn-input-mode",
+    "btn-open-guidance",
+    "btn-pause",
+    "btn-reset",
+];
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum MoveKeyMode {
@@ -39,12 +57,12 @@ struct InputState {
     right: bool,
     down: bool,
 
-    rotate_cw: bool,   // edge-triggered
-    rotate_ccw: bool,  // edge-triggered
-    hard_drop: bool,   // edge-triggered
-    hold: bool,        // edge-triggered
-    pause: bool,       // edge-triggered
-    reset: bool,       // edge-triggered
+    rotate_cw: bool,  // edge-triggered
+    rotate_ccw: bool, // edge-triggered
+    hard_drop: bool,  // edge-triggered
+    hold: bool,       // edge-triggered
+    pause: bool,      // edge-triggered
+    reset: bool,      // edge-triggered
 
     horiz_dir: i32, // -1, 0, +1
     das: f64,
@@ -163,12 +181,17 @@ impl App {
         let _ = self.overlay_hint.style().set_property("display", "none");
     }
 
+    fn set_entry_guidance_visible(&self, visible: bool) {
+        let display = if visible { "flex" } else { "none" };
+        let _ = self.entry_guidance.style().set_property("display", display);
+    }
+
     fn hide_entry_guidance(&self) {
-        let _ = self.entry_guidance.style().set_property("display", "none");
+        self.set_entry_guidance_visible(false);
     }
 
     fn show_entry_guidance(&self) {
-        let _ = self.entry_guidance.style().set_property("display", "flex");
+        self.set_entry_guidance_visible(true);
     }
 
     fn is_entry_guidance_visible(&self) -> bool {
@@ -181,7 +204,7 @@ impl App {
 
     fn sync_guidance_language_ui(&mut self) {
         let lang = self.guidance_lang_select.value();
-        let is_en = lang == "en";
+        let is_en = lang == GUIDANCE_LANG_EN;
 
         let _ = self
             .guidance_copy_en
@@ -199,7 +222,9 @@ impl App {
                 .set_attribute("aria-label", "Start game");
         } else {
             self.guidance_start_btn.set_inner_text("开始游戏");
-            let _ = self.guidance_start_btn.set_attribute("aria-label", "开始游戏");
+            let _ = self
+                .guidance_start_btn
+                .set_attribute("aria-label", "开始游戏");
         }
     }
 
@@ -266,6 +291,7 @@ impl App {
         let code = e.code();
         let code = code.as_str();
 
+        // While entry guidance is open, only allow quick close keys.
         if self.is_entry_guidance_visible() {
             if matches!(code, "Enter" | "NumpadEnter" | "Escape") {
                 e.prevent_default();
@@ -275,12 +301,12 @@ impl App {
         }
 
         // Prevent scrolling / page actions for keys we handle.
-        if self.is_left_key(code)
+        let handled_key = self.is_left_key(code)
             || self.is_right_key(code)
             || self.is_soft_drop_key(code)
             || self.is_rotate_cw_key(code)
-            || code == "Space"
-        {
+            || code == "Space";
+        if handled_key {
             e.prevent_default();
         }
 
@@ -356,6 +382,7 @@ impl App {
     }
 
     fn on_button_down(&mut self, id: &str, e: PointerEvent) {
+        // Keep the modal interaction strict so touches do not leak into gameplay.
         if self.is_entry_guidance_visible() {
             if id == "btn-guidance-close" {
                 e.prevent_default();
@@ -494,48 +521,45 @@ fn document(window: &Window) -> Result<Document, JsValue> {
         .ok_or_else(|| JsValue::from_str("No document on window"))
 }
 
+fn bind_pointer_event(
+    app: Rc<RefCell<App>>,
+    el: &Element,
+    id: &str,
+    event_name: &str,
+    is_down: bool,
+) -> Result<(), JsValue> {
+    // We intentionally keep one closure per event type and leak it with `forget`,
+    // because wasm event listeners must stay alive for the page lifetime.
+    let id = id.to_string();
+    let cb = Closure::<dyn FnMut(PointerEvent)>::wrap(Box::new(move |e: PointerEvent| {
+        if is_down {
+            app.borrow_mut().on_button_down(&id, e);
+        } else {
+            app.borrow_mut().on_button_up(&id, e);
+        }
+    }));
+    el.add_event_listener_with_callback(event_name, cb.as_ref().unchecked_ref())?;
+    cb.forget();
+    Ok(())
+}
+
 fn bind_button(app: Rc<RefCell<App>>, doc: &Document, id: &str) -> Result<(), JsValue> {
     let el = doc
         .get_element_by_id(id)
         .ok_or_else(|| JsValue::from_str(&format!("Missing #{id}")))?;
 
-    // pointerdown
-    {
-        let id = id.to_string();
-        let app = app.clone();
-        let cb = Closure::<dyn FnMut(PointerEvent)>::wrap(Box::new(move |e: PointerEvent| {
-            app.borrow_mut().on_button_down(&id, e);
-        }));
-        el.add_event_listener_with_callback("pointerdown", cb.as_ref().unchecked_ref())?;
-        cb.forget();
-    }
-
-    // pointerup
-    {
-        let id = id.to_string();
-        let app = app.clone();
-        let cb = Closure::<dyn FnMut(PointerEvent)>::wrap(Box::new(move |e: PointerEvent| {
-            app.borrow_mut().on_button_up(&id, e);
-        }));
-        el.add_event_listener_with_callback("pointerup", cb.as_ref().unchecked_ref())?;
-        cb.forget();
-    }
-
-    // pointercancel
-    {
-        let id = id.to_string();
-        let app = app.clone();
-        let cb = Closure::<dyn FnMut(PointerEvent)>::wrap(Box::new(move |e: PointerEvent| {
-            app.borrow_mut().on_button_up(&id, e);
-        }));
-        el.add_event_listener_with_callback("pointercancel", cb.as_ref().unchecked_ref())?;
-        cb.forget();
-    }
+    bind_pointer_event(app.clone(), &el, id, "pointerdown", true)?;
+    bind_pointer_event(app.clone(), &el, id, "pointerup", false)?;
+    bind_pointer_event(app, &el, id, "pointercancel", false)?;
 
     Ok(())
 }
 
-fn bind_guidance_lang_select(app: Rc<RefCell<App>>, doc: &Document, id: &str) -> Result<(), JsValue> {
+fn bind_guidance_lang_select(
+    app: Rc<RefCell<App>>,
+    doc: &Document,
+    id: &str,
+) -> Result<(), JsValue> {
     let el = doc
         .get_element_by_id(id)
         .ok_or_else(|| JsValue::from_str(&format!("Missing #{id}")))?;
@@ -586,21 +610,8 @@ pub fn start() -> Result<(), JsValue> {
         cb.forget();
     }
 
-    // Buttons (touch controls)
-    for id in [
-        "btn-guidance-close",
-        "btn-left",
-        "btn-right",
-        "btn-down",
-        "btn-rot-cw",
-        "btn-rot-ccw",
-        "btn-drop",
-        "btn-hold",
-        "btn-input-mode",
-        "btn-open-guidance",
-        "btn-pause",
-        "btn-reset",
-    ] {
+    // Pointer controls (desktop + touch)
+    for id in BUTTON_IDS {
         bind_button(app.clone(), &doc, id)?;
     }
     bind_guidance_lang_select(app.clone(), &doc, "guidance-lang")?;

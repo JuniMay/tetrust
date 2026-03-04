@@ -347,7 +347,9 @@ impl Game {
                 _ => 0,
             };
 
-            self.score = self.score.saturating_add((base as u64) * (self.level as u64));
+            self.score = self
+                .score
+                .saturating_add((base as u64) * (self.level as u64));
             self.level = 1 + (self.lines / 10);
         }
 

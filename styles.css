@@ -81,9 +81,11 @@ body{
 
 .board-wrap{ position:relative; flex: 0 0 auto; }
 .board{
-  width: min(92vw, 420px);
+  width: auto;
+  height: min(calc(100dvh - 170px), 840px);
   aspect-ratio: 10 / 20;
   display:block;
+  max-width: min(92vw, 420px);
   border-radius: var(--radius);
   border: 1px solid var(--stroke);
   background: var(--surface);

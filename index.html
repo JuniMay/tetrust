@@ -17,10 +17,74 @@
 
 <body>
   <div id="app">
+    <section id="entry-guidance" class="entry-guidance" aria-label="Getting started guide">
+      <div class="guidance-card">
+        <div class="guidance-lang-row">
+          <label class="guidance-lang-label" for="guidance-lang">Guidance language</label>
+          <select id="guidance-lang" class="guidance-lang-select" aria-label="Guidance language">
+            <option value="zh" selected>中文</option>
+            <option value="en">English</option>
+          </select>
+        </div>
+
+        <div id="guidance-copy-zh" class="guidance-copy" style="display:block;">
+          <h2 class="guidance-title">快速开始</h2>
+          <p class="guidance-subtitle">使用触屏按键或键盘即可立即开始。</p>
+          <div class="guidance-grid">
+            <div>移动</div><div>方向键 或 A / D</div>
+            <div>旋转</div><div>↑ / W（顺时针），Z（逆时针）</div>
+            <div>下落</div><div>↓ / S（软降），Space（硬降）</div>
+            <div>输入模式</div><div>顶部按钮 或 M 键</div>
+          </div>
+          <div class="guidance-rules-title">规则</div>
+          <ul class="guidance-rules-list">
+            <li><strong>Hold（暂存）</strong>：每个方块下落期间最多使用一次，锁定后重置。</li>
+            <li><strong>消行得分</strong>：1/2/3/4 行 = 100/300/500/800 × 当前等级。</li>
+            <li><strong>下落加分</strong>：软降每格 +1，硬降每格 +2。</li>
+            <li><strong>等级</strong>：每累计消除 10 行升 1 级，速度会提高。</li>
+            <li><strong>随机</strong>：7-bag 随机，Next 显示后续 5 个方块。</li>
+            <li><strong>锁定延迟</strong>：方块落地后约 500ms 锁定。</li>
+          </ul>
+        </div>
+
+        <div id="guidance-copy-en" class="guidance-copy">
+          <h2 class="guidance-title">Quick Start</h2>
+          <p class="guidance-subtitle">Use touch buttons or keyboard to start immediately.</p>
+          <div class="guidance-grid">
+            <div>Move</div><div>Arrows or A / D</div>
+            <div>Rotate</div><div>Up / W (CW), Z (CCW)</div>
+            <div>Drop</div><div>Down / S (soft), Space (hard)</div>
+            <div>Input mode</div><div>Top button or M key</div>
+          </div>
+          <div class="guidance-rules-title">Rules</div>
+          <ul class="guidance-rules-list">
+            <li><strong>Hold</strong>: One hold per falling piece; resets after lock.</li>
+            <li><strong>Line clear score</strong>: 1/2/3/4 lines = 100/300/500/800 × level.</li>
+            <li><strong>Drop bonus</strong>: Soft drop +1 per cell, hard drop +2 per cell.</li>
+            <li><strong>Level</strong>: +1 every 10 cleared lines; speed increases with level.</li>
+            <li><strong>Randomizer</strong>: 7-bag randomizer with 5 next previews.</li>
+            <li><strong>Lock delay</strong>: Locks about 500ms after touching ground.</li>
+          </ul>
+        </div>
+
+        <button id="btn-guidance-close" class="chip guidance-start" aria-label="开始游戏">开始游戏</button>
+      </div>
+    </section>
+
     <header class="topbar">
-      <div class="brand">
-        <span class="brand-mark">▦</span>
-        <span class="brand-name">Tetrust</span>
+      <div class="top-stats" aria-label="Game stats">
+        <div class="stat">
+          <div class="label">Score</div>
+          <div id="score" class="value">0</div>
+        </div>
+        <div class="stat">
+          <div class="label">Level</div>
+          <div id="level" class="value">1</div>
+        </div>
+        <div class="stat">
+          <div class="label">Lines</div>
+          <div id="lines" class="value">0</div>
+        </div>
       </div>
       <div class="topbar-actions">
         <button id="btn-input-mode" class="chip" aria-label="Toggle keyboard movement scheme">Input: Arrows</button>
@@ -31,39 +95,28 @@
 
     <main class="layout">
       <section class="board-wrap" aria-label="Playfield">
-        <canvas id="board" class="board" width="320" height="640"></canvas>
-        <div id="overlay-hint" class="overlay-hint" aria-hidden="true">
-          Tap to focus • Use on‑screen controls or keyboard
+        <div class="side-previews side-previews-left" aria-label="Hold and next previews">
+          <div class="side-preview-block">
+            <div class="side-tag">H</div>
+            <canvas id="hold-side" class="side-canvas side-hold" width="80" height="80"></canvas>
+          </div>
+          <div class="side-preview-block">
+            <div class="side-tag">N</div>
+            <canvas id="next-side" class="side-canvas side-next" width="80" height="320"></canvas>
+          </div>
         </div>
+
+        <div class="board-main">
+          <canvas id="board" class="board" width="320" height="640"></canvas>
+          <div id="overlay-hint" class="overlay-hint" aria-hidden="true">
+            Tap to focus • Use on‑screen controls or keyboard
+          </div>
+        </div>
+
+        <div class="side-balance" aria-hidden="true"></div>
       </section>
 
       <aside class="panel" aria-label="Stats">
-        <div class="stats">
-          <div class="stat">
-            <div class="label">Score</div>
-            <div id="score" class="value">0</div>
-          </div>
-          <div class="stat">
-            <div class="label">Level</div>
-            <div id="level" class="value">1</div>
-          </div>
-          <div class="stat">
-            <div class="label">Lines</div>
-            <div id="lines" class="value">0</div>
-          </div>
-        </div>
-
-        <div class="minis">
-          <div class="mini">
-            <div class="mini-title">Hold</div>
-            <canvas id="hold" class="mini-canvas" width="160" height="160"></canvas>
-          </div>
-          <div class="mini">
-            <div class="mini-title">Next</div>
-            <canvas id="next" class="mini-canvas" width="160" height="340"></canvas>
-          </div>
-        </div>
-
         <div class="help">
           <div class="help-title">Controls</div>
           <div class="help-grid">
@@ -76,6 +129,12 @@
             <div>Restart</div><div>R</div>
             <div>Toggle input</div><div>M or top button</div>
           </div>
+        </div>
+
+        <div class="panel-tools" aria-label="Guide actions">
+          <button id="btn-open-guidance" class="chip panel-btn" aria-label="Open guidance">
+            Open Guidance / 打开引导
+          </button>
         </div>
       </aside>
     </main>

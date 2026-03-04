@@ -24,15 +24,15 @@ pub struct Renderer {
     board_w: f64,
     board_h: f64,
 
-    hold_canvas: HtmlCanvasElement,
-    hold_ctx: CanvasRenderingContext2d,
-    hold_w: f64,
-    hold_h: f64,
+    side_hold_canvas: HtmlCanvasElement,
+    side_hold_ctx: CanvasRenderingContext2d,
+    side_hold_w: f64,
+    side_hold_h: f64,
 
-    next_canvas: HtmlCanvasElement,
-    next_ctx: CanvasRenderingContext2d,
-    next_w: f64,
-    next_h: f64,
+    side_next_canvas: HtmlCanvasElement,
+    side_next_ctx: CanvasRenderingContext2d,
+    side_next_w: f64,
+    side_next_h: f64,
 
     score_el: HtmlElement,
     level_el: HtmlElement,
@@ -47,24 +47,24 @@ impl Renderer {
             .get_element_by_id("board")
             .ok_or_else(|| JsValue::from_str("Missing #board"))?
             .dyn_into::<HtmlCanvasElement>()?;
-        let hold_canvas = doc
-            .get_element_by_id("hold")
-            .ok_or_else(|| JsValue::from_str("Missing #hold"))?
+        let side_hold_canvas = doc
+            .get_element_by_id("hold-side")
+            .ok_or_else(|| JsValue::from_str("Missing #hold-side"))?
             .dyn_into::<HtmlCanvasElement>()?;
-        let next_canvas = doc
-            .get_element_by_id("next")
-            .ok_or_else(|| JsValue::from_str("Missing #next"))?
+        let side_next_canvas = doc
+            .get_element_by_id("next-side")
+            .ok_or_else(|| JsValue::from_str("Missing #next-side"))?
             .dyn_into::<HtmlCanvasElement>()?;
 
         let board_ctx = board_canvas
             .get_context("2d")?
             .ok_or_else(|| JsValue::from_str("No 2d context"))?
             .dyn_into::<CanvasRenderingContext2d>()?;
-        let hold_ctx = hold_canvas
+        let side_hold_ctx = side_hold_canvas
             .get_context("2d")?
             .ok_or_else(|| JsValue::from_str("No 2d context"))?
             .dyn_into::<CanvasRenderingContext2d>()?;
-        let next_ctx = next_canvas
+        let side_next_ctx = side_next_canvas
             .get_context("2d")?
             .ok_or_else(|| JsValue::from_str("No 2d context"))?
             .dyn_into::<CanvasRenderingContext2d>()?;
@@ -90,15 +90,15 @@ impl Renderer {
             board_w: 0.0,
             board_h: 0.0,
 
-            hold_canvas,
-            hold_ctx,
-            hold_w: 0.0,
-            hold_h: 0.0,
+            side_hold_canvas,
+            side_hold_ctx,
+            side_hold_w: 0.0,
+            side_hold_h: 0.0,
 
-            next_canvas,
-            next_ctx,
-            next_w: 0.0,
-            next_h: 0.0,
+            side_next_canvas,
+            side_next_ctx,
+            side_next_w: 0.0,
+            side_next_h: 0.0,
 
             score_el,
             level_el,
@@ -110,8 +110,8 @@ impl Renderer {
         // This method is called through shared reference, but we only mutate DOM state.
         // It's fine as all DOM operations are interior-mutable.
         resize_canvas(&self.window, &self.board_canvas, &self.board_ctx)?;
-        resize_canvas(&self.window, &self.hold_canvas, &self.hold_ctx)?;
-        resize_canvas(&self.window, &self.next_canvas, &self.next_ctx)?;
+        resize_canvas(&self.window, &self.side_hold_canvas, &self.side_hold_ctx)?;
+        resize_canvas(&self.window, &self.side_next_canvas, &self.side_next_ctx)?;
         Ok(())
     }
 
@@ -119,18 +119,18 @@ impl Renderer {
         // Cache CSS sizes (cheap, but avoid repeating during draw calls).
         self.board_w = self.board_canvas.client_width() as f64;
         self.board_h = self.board_canvas.client_height() as f64;
-        self.hold_w = self.hold_canvas.client_width() as f64;
-        self.hold_h = self.hold_canvas.client_height() as f64;
-        self.next_w = self.next_canvas.client_width() as f64;
-        self.next_h = self.next_canvas.client_height() as f64;
+        self.side_hold_w = self.side_hold_canvas.client_width() as f64;
+        self.side_hold_h = self.side_hold_canvas.client_height() as f64;
+        self.side_next_w = self.side_next_canvas.client_width() as f64;
+        self.side_next_h = self.side_next_canvas.client_height() as f64;
 
         self.score_el.set_inner_text(&game.score.to_string());
         self.level_el.set_inner_text(&game.level.to_string());
         self.lines_el.set_inner_text(&game.lines.to_string());
 
         self.draw_board(game)?;
-        self.draw_hold(game)?;
-        self.draw_next(game)?;
+        self.draw_side_hold(game)?;
+        self.draw_side_next(game)?;
 
         Ok(())
     }
@@ -231,10 +231,10 @@ impl Renderer {
         Ok(())
     }
 
-    fn draw_hold(&mut self, game: &Game) -> Result<(), JsValue> {
-        let ctx = &self.hold_ctx;
-        let w = self.hold_w;
-        let h = self.hold_h;
+    fn draw_side_hold(&mut self, game: &Game) -> Result<(), JsValue> {
+        let ctx = &self.side_hold_ctx;
+        let w = self.side_hold_w;
+        let h = self.side_hold_h;
 
         ctx.set_fill_style_str("#121a29");
         ctx.fill_rect(0.0, 0.0, w, h);
@@ -242,28 +242,28 @@ impl Renderer {
         if let Some(kind) = game.hold {
             draw_piece_in_box(ctx, kind, w, h, 1.0)?;
         } else {
-            // subtle empty hint
             ctx.set_fill_style_str("rgba(255,255,255,0.18)");
-            ctx.set_font("600 12px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial");
+            ctx.set_font("700 11px system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial");
             ctx.set_text_align("center");
             ctx.set_text_baseline("middle");
-            ctx.fill_text("Hold", w / 2.0, h / 2.0)?;
+            ctx.fill_text("H", w / 2.0, h / 2.0)?;
         }
 
         Ok(())
     }
 
-    fn draw_next(&mut self, game: &Game) -> Result<(), JsValue> {
-        let ctx = &self.next_ctx;
-        let w = self.next_w;
-        let h = self.next_h;
+    fn draw_side_next(&mut self, game: &Game) -> Result<(), JsValue> {
+        let ctx = &self.side_next_ctx;
+        let w = self.side_next_w;
+        let h = self.side_next_h;
 
         ctx.set_fill_style_str("#121a29");
         ctx.fill_rect(0.0, 0.0, w, h);
 
-        // Draw 5 next pieces stacked.
-        let slot_h = h / 5.0;
-        for (i, kind) in game.next.iter().take(5).enumerate() {
+        // Compact right-side stack.
+        let count = 4usize;
+        let slot_h = h / (count as f64);
+        for (i, kind) in game.next.iter().take(count).enumerate() {
             let y0 = (i as f64) * slot_h;
             draw_piece_in_slot(ctx, *kind, w, slot_h, y0)?;
         }

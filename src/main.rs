@@ -13,7 +13,7 @@ use wasm_bindgen::closure::Closure;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
-use web_sys::{Document, HtmlElement, KeyboardEvent, PointerEvent, Window};
+use web_sys::{Document, Event, HtmlElement, HtmlSelectElement, KeyboardEvent, PointerEvent, Window};
 
 const DAS_MS: f64 = 140.0; // Delayed Auto Shift
 const ARR_MS: f64 = 40.0;  // Auto Repeat Rate
@@ -70,6 +70,11 @@ struct App {
 
     last_time: Option<f64>,
     overlay_hint: HtmlElement,
+    entry_guidance: HtmlElement,
+    guidance_lang_select: HtmlSelectElement,
+    guidance_copy_zh: HtmlElement,
+    guidance_copy_en: HtmlElement,
+    guidance_start_btn: HtmlElement,
     input_mode_btn: HtmlElement,
     help_move_keys: HtmlElement,
     help_rotate_keys: HtmlElement,
@@ -92,6 +97,26 @@ impl App {
         let overlay_hint = document
             .get_element_by_id("overlay-hint")
             .ok_or_else(|| JsValue::from_str("Missing #overlay-hint"))?
+            .dyn_into::<HtmlElement>()?;
+        let entry_guidance = document
+            .get_element_by_id("entry-guidance")
+            .ok_or_else(|| JsValue::from_str("Missing #entry-guidance"))?
+            .dyn_into::<HtmlElement>()?;
+        let guidance_lang_select = document
+            .get_element_by_id("guidance-lang")
+            .ok_or_else(|| JsValue::from_str("Missing #guidance-lang"))?
+            .dyn_into::<HtmlSelectElement>()?;
+        let guidance_copy_zh = document
+            .get_element_by_id("guidance-copy-zh")
+            .ok_or_else(|| JsValue::from_str("Missing #guidance-copy-zh"))?
+            .dyn_into::<HtmlElement>()?;
+        let guidance_copy_en = document
+            .get_element_by_id("guidance-copy-en")
+            .ok_or_else(|| JsValue::from_str("Missing #guidance-copy-en"))?
+            .dyn_into::<HtmlElement>()?;
+        let guidance_start_btn = document
+            .get_element_by_id("btn-guidance-close")
+            .ok_or_else(|| JsValue::from_str("Missing #btn-guidance-close"))?
             .dyn_into::<HtmlElement>()?;
 
         let input_mode_btn = document
@@ -118,11 +143,17 @@ impl App {
             input_mode: MoveKeyMode::Arrows,
             last_time: None,
             overlay_hint,
+            entry_guidance,
+            guidance_lang_select,
+            guidance_copy_zh,
+            guidance_copy_en,
+            guidance_start_btn,
             input_mode_btn,
             help_move_keys,
             help_rotate_keys,
             help_soft_drop_key,
         };
+        app.sync_guidance_language_ui();
         app.sync_input_mode_ui();
 
         Ok(app)
@@ -130,6 +161,46 @@ impl App {
 
     fn hide_overlay_hint(&self) {
         let _ = self.overlay_hint.style().set_property("display", "none");
+    }
+
+    fn hide_entry_guidance(&self) {
+        let _ = self.entry_guidance.style().set_property("display", "none");
+    }
+
+    fn show_entry_guidance(&self) {
+        let _ = self.entry_guidance.style().set_property("display", "flex");
+    }
+
+    fn is_entry_guidance_visible(&self) -> bool {
+        self.entry_guidance
+            .style()
+            .get_property_value("display")
+            .map(|v| v != "none")
+            .unwrap_or(true)
+    }
+
+    fn sync_guidance_language_ui(&mut self) {
+        let lang = self.guidance_lang_select.value();
+        let is_en = lang == "en";
+
+        let _ = self
+            .guidance_copy_en
+            .style()
+            .set_property("display", if is_en { "block" } else { "none" });
+        let _ = self
+            .guidance_copy_zh
+            .style()
+            .set_property("display", if is_en { "none" } else { "block" });
+
+        if is_en {
+            self.guidance_start_btn.set_inner_text("Start Game");
+            let _ = self
+                .guidance_start_btn
+                .set_attribute("aria-label", "Start game");
+        } else {
+            self.guidance_start_btn.set_inner_text("开始游戏");
+            let _ = self.guidance_start_btn.set_attribute("aria-label", "开始游戏");
+        }
     }
 
     fn is_left_key(&self, code: &str) -> bool {
@@ -194,6 +265,14 @@ impl App {
     fn on_key_down(&mut self, e: KeyboardEvent) {
         let code = e.code();
         let code = code.as_str();
+
+        if self.is_entry_guidance_visible() {
+            if matches!(code, "Enter" | "NumpadEnter" | "Escape") {
+                e.prevent_default();
+                self.hide_entry_guidance();
+            }
+            return;
+        }
 
         // Prevent scrolling / page actions for keys we handle.
         if self.is_left_key(code)
@@ -277,6 +356,14 @@ impl App {
     }
 
     fn on_button_down(&mut self, id: &str, e: PointerEvent) {
+        if self.is_entry_guidance_visible() {
+            if id == "btn-guidance-close" {
+                e.prevent_default();
+                self.hide_entry_guidance();
+            }
+            return;
+        }
+
         e.prevent_default();
         self.hide_overlay_hint();
 
@@ -293,6 +380,8 @@ impl App {
             "btn-pause" => self.input.pause = true,
             "btn-reset" => self.input.reset = true,
             "btn-input-mode" => self.toggle_input_mode(),
+            "btn-open-guidance" => self.show_entry_guidance(),
+            "btn-guidance-close" => {}
 
             _ => {}
         }
@@ -446,6 +535,20 @@ fn bind_button(app: Rc<RefCell<App>>, doc: &Document, id: &str) -> Result<(), Js
     Ok(())
 }
 
+fn bind_guidance_lang_select(app: Rc<RefCell<App>>, doc: &Document, id: &str) -> Result<(), JsValue> {
+    let el = doc
+        .get_element_by_id(id)
+        .ok_or_else(|| JsValue::from_str(&format!("Missing #{id}")))?;
+
+    let cb = Closure::<dyn FnMut(Event)>::wrap(Box::new(move |_e: Event| {
+        app.borrow_mut().sync_guidance_language_ui();
+    }));
+    el.add_event_listener_with_callback("change", cb.as_ref().unchecked_ref())?;
+    cb.forget();
+
+    Ok(())
+}
+
 #[wasm_bindgen(start)]
 pub fn start() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
@@ -485,6 +588,7 @@ pub fn start() -> Result<(), JsValue> {
 
     // Buttons (touch controls)
     for id in [
+        "btn-guidance-close",
         "btn-left",
         "btn-right",
         "btn-down",
@@ -493,11 +597,13 @@ pub fn start() -> Result<(), JsValue> {
         "btn-drop",
         "btn-hold",
         "btn-input-mode",
+        "btn-open-guidance",
         "btn-pause",
         "btn-reset",
     ] {
         bind_button(app.clone(), &doc, id)?;
     }
+    bind_guidance_lang_select(app.clone(), &doc, "guidance-lang")?;
 
     // RAF loop
     let f = Rc::new(RefCell::new(None::<Closure<dyn FnMut(f64)>>));

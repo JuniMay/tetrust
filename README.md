@@ -49,10 +49,10 @@ Push to `main` and it deploys.
 ## Controls
 
 Keyboard:
-- ←/→ Move
-- ↑ Rotate CW
+- Input mode toggle: top button (`Input: Arrows` / `Input: WASD`) or `M`
+- Arrows mode: `←/→` Move, `↑` Rotate CW, `↓` Soft drop
+- WASD mode: `A/D` Move, `W` Rotate CW, `S` Soft drop
 - Z Rotate CCW
-- ↓ Soft drop
 - Space Hard drop
 - C / Shift Hold
 - P Pause

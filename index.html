@@ -23,6 +23,7 @@
         <span class="brand-name">Tetrust</span>
       </div>
       <div class="topbar-actions">
+        <button id="btn-input-mode" class="chip" aria-label="Toggle keyboard movement scheme">Input: Arrows</button>
         <button id="btn-pause" class="chip" aria-label="Pause / resume">Pause</button>
         <button id="btn-reset" class="chip" aria-label="Restart game">Restart</button>
       </div>
@@ -66,13 +67,14 @@
         <div class="help">
           <div class="help-title">Controls</div>
           <div class="help-grid">
-            <div>Move</div><div>← / →</div>
-            <div>Rotate</div><div>↑ (CW) • Z (CCW)</div>
-            <div>Soft drop</div><div>↓</div>
+            <div>Move</div><div id="help-move-keys">← / →</div>
+            <div>Rotate</div><div id="help-rotate-keys">↑ (CW) • Z (CCW)</div>
+            <div>Soft drop</div><div id="help-soft-drop-key">↓</div>
             <div>Hard drop</div><div>Space</div>
             <div>Hold</div><div>C or Shift</div>
             <div>Pause</div><div>P</div>
             <div>Restart</div><div>R</div>
+            <div>Toggle input</div><div>M or top button</div>
           </div>
         </div>
       </aside>

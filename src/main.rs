@@ -18,6 +18,21 @@ use web_sys::{Document, HtmlElement, KeyboardEvent, PointerEvent, Window};
 const DAS_MS: f64 = 140.0; // Delayed Auto Shift
 const ARR_MS: f64 = 40.0;  // Auto Repeat Rate
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum MoveKeyMode {
+    Arrows,
+    Wasd,
+}
+
+impl MoveKeyMode {
+    fn toggled(self) -> Self {
+        match self {
+            Self::Arrows => Self::Wasd,
+            Self::Wasd => Self::Arrows,
+        }
+    }
+}
+
 #[derive(Default)]
 struct InputState {
     left: bool,
@@ -51,9 +66,14 @@ struct App {
     renderer: Renderer,
     game: Game,
     input: InputState,
+    input_mode: MoveKeyMode,
 
     last_time: Option<f64>,
     overlay_hint: HtmlElement,
+    input_mode_btn: HtmlElement,
+    help_move_keys: HtmlElement,
+    help_rotate_keys: HtmlElement,
+    help_soft_drop_key: HtmlElement,
 }
 
 impl App {
@@ -74,35 +94,135 @@ impl App {
             .ok_or_else(|| JsValue::from_str("Missing #overlay-hint"))?
             .dyn_into::<HtmlElement>()?;
 
-        Ok(Self {
+        let input_mode_btn = document
+            .get_element_by_id("btn-input-mode")
+            .ok_or_else(|| JsValue::from_str("Missing #btn-input-mode"))?
+            .dyn_into::<HtmlElement>()?;
+        let help_move_keys = document
+            .get_element_by_id("help-move-keys")
+            .ok_or_else(|| JsValue::from_str("Missing #help-move-keys"))?
+            .dyn_into::<HtmlElement>()?;
+        let help_rotate_keys = document
+            .get_element_by_id("help-rotate-keys")
+            .ok_or_else(|| JsValue::from_str("Missing #help-rotate-keys"))?
+            .dyn_into::<HtmlElement>()?;
+        let help_soft_drop_key = document
+            .get_element_by_id("help-soft-drop-key")
+            .ok_or_else(|| JsValue::from_str("Missing #help-soft-drop-key"))?
+            .dyn_into::<HtmlElement>()?;
+
+        let mut app = Self {
             renderer,
             game,
             input: InputState::default(),
+            input_mode: MoveKeyMode::Arrows,
             last_time: None,
             overlay_hint,
-        })
+            input_mode_btn,
+            help_move_keys,
+            help_rotate_keys,
+            help_soft_drop_key,
+        };
+        app.sync_input_mode_ui();
+
+        Ok(app)
     }
 
     fn hide_overlay_hint(&self) {
         let _ = self.overlay_hint.style().set_property("display", "none");
     }
 
+    fn is_left_key(&self, code: &str) -> bool {
+        match self.input_mode {
+            MoveKeyMode::Arrows => code == "ArrowLeft",
+            MoveKeyMode::Wasd => code == "KeyA",
+        }
+    }
+
+    fn is_right_key(&self, code: &str) -> bool {
+        match self.input_mode {
+            MoveKeyMode::Arrows => code == "ArrowRight",
+            MoveKeyMode::Wasd => code == "KeyD",
+        }
+    }
+
+    fn is_soft_drop_key(&self, code: &str) -> bool {
+        match self.input_mode {
+            MoveKeyMode::Arrows => code == "ArrowDown",
+            MoveKeyMode::Wasd => code == "KeyS",
+        }
+    }
+
+    fn is_rotate_cw_key(&self, code: &str) -> bool {
+        match self.input_mode {
+            MoveKeyMode::Arrows => matches!(code, "ArrowUp" | "KeyX"),
+            MoveKeyMode::Wasd => matches!(code, "KeyW" | "KeyX"),
+        }
+    }
+
+    fn sync_input_mode_ui(&mut self) {
+        match self.input_mode {
+            MoveKeyMode::Arrows => {
+                self.input_mode_btn.set_inner_text("Input: Arrows");
+                self.help_move_keys.set_inner_text("← / →");
+                self.help_rotate_keys.set_inner_text("↑ (CW) • Z (CCW)");
+                self.help_soft_drop_key.set_inner_text("↓");
+            }
+            MoveKeyMode::Wasd => {
+                self.input_mode_btn.set_inner_text("Input: WASD");
+                self.help_move_keys.set_inner_text("A / D");
+                self.help_rotate_keys.set_inner_text("W (CW) • Z (CCW)");
+                self.help_soft_drop_key.set_inner_text("S");
+            }
+        }
+    }
+
+    fn toggle_input_mode(&mut self) {
+        self.input_mode = self.input_mode.toggled();
+
+        // Avoid sticky movement when switching scheme while a key is held.
+        self.input.left = false;
+        self.input.right = false;
+        self.input.down = false;
+        self.input.horiz_dir = 0;
+        self.input.das = 0.0;
+        self.input.arr = 0.0;
+
+        self.sync_input_mode_ui();
+    }
+
     fn on_key_down(&mut self, e: KeyboardEvent) {
+        let code = e.code();
+        let code = code.as_str();
+
         // Prevent scrolling / page actions for keys we handle.
-        match e.key().as_str() {
-            "ArrowLeft" | "ArrowRight" | "ArrowDown" | "ArrowUp" | " " => e.prevent_default(),
-            _ => {}
+        if self.is_left_key(code)
+            || self.is_right_key(code)
+            || self.is_soft_drop_key(code)
+            || self.is_rotate_cw_key(code)
+            || code == "Space"
+        {
+            e.prevent_default();
         }
 
         self.hide_overlay_hint();
 
-        match e.code().as_str() {
-            "ArrowLeft" => self.input.left = true,
-            "ArrowRight" => self.input.right = true,
-            "ArrowDown" => self.input.down = true,
+        if self.is_left_key(code) {
+            self.input.left = true;
+            return;
+        }
+        if self.is_right_key(code) {
+            self.input.right = true;
+            return;
+        }
+        if self.is_soft_drop_key(code) {
+            self.input.down = true;
+            return;
+        }
 
+        match code {
             // Rotations
-            "ArrowUp" | "KeyX" => {
+            _ if self.is_rotate_cw_key(code) => {
                 if !e.repeat() {
                     self.input.rotate_cw = true;
                 }
@@ -134,16 +254,25 @@ impl App {
                     self.input.reset = true;
                 }
             }
+            "KeyM" => {
+                if !e.repeat() {
+                    self.toggle_input_mode();
+                }
+            }
             _ => {}
         }
     }
 
     fn on_key_up(&mut self, e: KeyboardEvent) {
-        match e.code().as_str() {
-            "ArrowLeft" => self.input.left = false,
-            "ArrowRight" => self.input.right = false,
-            "ArrowDown" => self.input.down = false,
-            _ => {}
+        let code = e.code();
+        let code = code.as_str();
+
+        if self.is_left_key(code) {
+            self.input.left = false;
+        } else if self.is_right_key(code) {
+            self.input.right = false;
+        } else if self.is_soft_drop_key(code) {
+            self.input.down = false;
         }
     }
 
@@ -163,6 +292,7 @@ impl App {
 
             "btn-pause" => self.input.pause = true,
             "btn-reset" => self.input.reset = true,
+            "btn-input-mode" => self.toggle_input_mode(),
 
             _ => {}
         }
@@ -362,6 +492,7 @@ pub fn start() -> Result<(), JsValue> {
         "btn-rot-ccw",
         "btn-drop",
         "btn-hold",
+        "btn-input-mode",
         "btn-pause",
         "btn-reset",
     ] {
